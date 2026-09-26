@@ -1,0 +1,175 @@
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <iomanip>
+using namespace std;
+
+struct Student { int id, age; string name, dept, phone; float marks; };
+struct Node { Student data; Node* next; };
+
+Node* head = nullptr; int cnt = 0;
+
+Node* make(Student s) { Node* n = new Node(); n->data = s; n->next = nullptr; return n; }
+
+void show(Student s) {
+    cout << left << setw(6) << s.id << setw(18) << s.name << setw(4) << s.age 
+         << setw(10) << s.dept << setw(8) << fixed << setprecision(1) << s.marks 
+         << setw(12) << s.phone << "\n";
+}
+
+Node* find(int id) { for (Node* t = head; t; t = t->next) if (t->data.id == id) return t; return nullptr; }
+
+void add() {
+    Student s; cout << "\nID: "; cin >> s.id; cin.ignore();
+    if (find(s.id)) { cout << "[ERROR] ID exists!\n"; return; }
+    cout << "Name: "; getline(cin, s.name);
+    cout << "Age: "; cin >> s.age; cin.ignore();
+    cout << "Dept: "; getline(cin, s.dept);
+    cout << "Marks: "; cin >> s.marks; cin.ignore();
+    cout << "Phone: "; getline(cin, s.phone);
+    if (s.marks < 0 || s.marks > 100) { cout << "[ERROR] Invalid!\n"; return; }
+    Node* n = make(s); if (!head) head = n; else { n->next = head; head = n; } cnt++;
+    cout << "[OK] Added!\n";
+}
+
+void display() {
+    if (!head) { cout << "[INFO] Empty!\n"; return; }
+    cout << "\n=== ALL STUDENTS === Total: " << cnt << "\n\n";
+    cout << left << setw(6) << "ID" << setw(18) << "NAME" << setw(4) << "AGE" 
+         << setw(10) << "DEPT" << setw(8) << "MARKS" << setw(12) << "PHONE" << "\n";
+    cout << string(58, '-') << "\n";
+    for (Node* t = head; t; t = t->next) show(t->data);
+    cout << "==================\n";
+}
+
+void search() {
+    cout << "\nID: "; int id; cin >> id; cin.ignore();
+    Node* s = find(id);
+    if (s) { cout << "[FOUND]\n"; show(s->data); } else cout << "[NOT FOUND]\n";
+}
+
+void update() {
+    cout << "\nID: "; int id; cin >> id; cin.ignore();
+    Node* s = find(id);
+    if (!s) { cout << "[NOT FOUND]\n"; return; }
+    cout << "1.Name 2.Age 3.Dept 4.Marks 5.Phone\nChoice: "; int ch; cin >> ch; cin.ignore();
+    switch(ch) {
+        case 1: cout << "New: "; getline(cin, s->data.name); break;
+        case 2: cout << "New: "; cin >> s->data.age; break;
+        case 3: cout << "New: "; cin.ignore(); getline(cin, s->data.dept); break;
+        case 4: cout << "New: "; cin >> s->data.marks; break;
+        case 5: cout << "New: "; cin.ignore(); getline(cin, s->data.phone); break;
+        default: cout << "[ERROR] Invalid!\n"; return;
+    }
+    cout << "[OK] Updated!\n";
+}
+
+void del() {
+    cout << "\nID: "; int id; cin >> id; cin.ignore();
+    if (head && head->data.id == id) { Node* t = head; head = head->next; delete t; cnt--; cout << "[OK]\n"; return; }
+    for (Node* t = head, *p = nullptr; t; p = t, t = t->next)
+        if (t->data.id == id) { p->next = t->next; delete t; cnt--; cout << "[OK]\n"; return; }
+    cout << "[NOT FOUND]\n";
+}
+
+void sort() {
+    if (!head) { cout << "[INFO] Empty!\n"; return; }
+    Student* a = new Student[cnt]; Node* t = head;
+    for (int i = 0; i < cnt; i++) { a[i] = t->data; t = t->next; }
+    cout << "\n1.Marks↓ 2.Marks↑ 3.ID↑ 4.ID↓ 5.Name A-Z 6.Name Z-A\nChoice: "; int tp; cin >> tp; cin.ignore();
+    for (int i = 0; i < cnt-1; i++)
+        for (int j = 0; j < cnt-i-1; j++) {
+            bool sw = false;
+            if (tp == 1) sw = a[j].marks < a[j+1].marks;
+            else if (tp == 2) sw = a[j].marks > a[j+1].marks;
+            else if (tp == 3) sw = a[j].id > a[j+1].id;
+            else if (tp == 4) sw = a[j].id < a[j+1].id;
+            else if (tp == 5) sw = a[j].name > a[j+1].name;
+            else if (tp == 6) sw = a[j].name < a[j+1].name;
+            if (sw) { Student tmp = a[j]; a[j] = a[j+1]; a[j+1] = tmp; }
+        }
+    cout << "=== SORTED ===\n" << string(58, '-') << "\n";
+    for (int i = 0; i < cnt; i++) show(a[i]);
+    cout << "==============\n"; delete[] a;
+}
+
+void save() {
+    if (!head) { cout << "[INFO] Empty!\n"; return; }
+    ofstream f("students.csv"); f << "ID,Name,Age,Dept,Marks,Phone\n";
+    for (Node* t = head; t; t = t->next)
+        f << t->data.id << "," << t->data.name << "," << t->data.age << ","
+          << t->data.dept << "," << t->data.marks << "," << t->data.phone << "\n";
+    f.close(); cout << "[OK] Saved!\n";
+}
+
+void load() {
+    ifstream f("students.csv");
+    if (!f.is_open()) { cout << "[INFO] Fresh start.\n"; return; }
+    string line; getline(f, line);
+    while (getline(f, line)) {
+        stringstream ss(line); string tok; Student s;
+        getline(ss, tok, ','); s.id = stoi(tok);
+        getline(ss, s.name, ',');
+        getline(ss, tok, ','); s.age = stoi(tok);
+        getline(ss, s.dept, ',');
+        getline(ss, tok, ','); s.marks = stof(tok);
+        getline(ss, s.phone, ',');
+        Node* n = make(s); if (!head) head = n; else { n->next = head; head = n; } cnt++;
+    }
+    f.close(); cout << "[OK] Loaded!\n";
+}
+
+void report() {
+    if (!head) { cout << "[INFO] Empty!\n"; return; }
+    ofstream f("students_report.txt"); f << "=== REPORT ===\nTotal: " << cnt << "\n\n";
+    int i = 1;
+    for (Node* t = head; t; t = t->next) {
+        f << "Record " << i++ << "\n" << "ID: " << t->data.id << "\n" << "Name: " << t->data.name << "\n"
+          << "Age: " << t->data.age << "\n" << "Dept: " << t->data.dept << "\n"
+          << "Marks: " << fixed << setprecision(1) << t->data.marks << "\n" 
+          << "Phone: " << t->data.phone << "\n---\n\n";
+    }
+    f.close(); cout << "[OK] Exported!\n";
+}
+
+void stats() {
+    if (!head) { cout << "[INFO] Empty!\n"; return; }
+    float tot = 0, mx = -1, mn = 101; int tage = 0;
+    for (Node* t = head; t; t = t->next) {
+        tot += t->data.marks; tage += t->data.age;
+        if (t->data.marks > mx) mx = t->data.marks;
+        if (t->data.marks < mn) mn = t->data.marks;
+    }
+    cout << "\n=== STATS ===\nTotal: " << cnt << "\nAvg Marks: " << fixed << setprecision(2) 
+         << tot/cnt << "\nAvg Age: " << tage/cnt << "\nHigh: " << mx << "\nLow: " << mn 
+         << "\nRange: " << mx-mn << "\n=============\n";
+}
+
+int main() {
+    cout << "╔════════════════════════════════════╗\n"
+         << "║  STUDENT RECORD MANAGEMENT SYSTEm  ║\n"
+         << "║          Team: Formula 4           ║\n"
+         << "╚════════════════════════════════════╝\n";
+    load();
+    while (1) {
+        cout << "=== MENU ===\n1.Add 2.Display 3.Search 4.Update 5.Delete\n"
+             << "6.Sort 7.Save 8.Report 9.Stats 10.Exit\nChoice: ";
+        int c; cin >> c; cin.ignore();
+        switch(c) {
+            case 1: add(); break;
+            case 2: display(); break;
+            case 3: search(); break;
+            case 4: update(); break;
+            case 5: del(); break;
+            case 6: sort(); break;
+            case 7: save(); break;
+            case 8: report(); break;
+            case 9: stats(); break;
+            case 10: save(); cout << "[EXIT]\n"; goto end;
+            default: cout << "[ERROR] Invalid!\n";
+        }
+    }
+    end:
+    for (Node* t; head; delete t) { t = head; head = head->next; }
+    return 0;
+}
